@@ -1,0 +1,212 @@
+; Sample script file for INSTALL.PRG
+;
+; Comments begin with ;. Lines ending with ^ are continued onto the
+; next line. Sequences beginning with ~ are hexadecimal, like ~4A.
+;
+; Variables that can be inserted into strings:
+;   %diskname    name of disk -- decides itself to use source or dest name
+;   %drive       letter of drive -- decides itself if source or dest
+;   %sdrive      source disk drive letter
+;   %ddrive      destination disk drive letter
+;   %spath       full path of source disk drive (Ex.: A:\)
+;   %dpath       full path of dest disk drive (Ex.: D:\FOO\)
+;   %instdir     folder INSTALL.PRG was run from
+;   %filename    file being operated upon
+;   %folder      folder being operated upon
+;   %var1..%var5 set by var command
+;
+; Commands:
+;   askdrive                ask for source and dest drives
+;   destsel <default> <title> use item selector to get destination drive
+;                           and path; you MUST use this or askdrive
+;                           (but both doesn't make sense) before copying;
+;                           "default" is the entire path (with *.*) to
+;                           start with; "title" is used if >= TOS 1.4;
+;                           source drive is drive INSTALL.PRG runs from
+;                           or A: if not run from floppy
+;   ask <buttons>           get options; buttons are in one line,
+;                           separated with |'s; each button is at most
+;                           10 chars; there is always a Quit button
+;                           during ASK, you don't need to include one;
+;                           follow this command with:
+;     button1
+;        <commands>
+;     button2
+;        <commands>
+;     button3
+;        <commands>
+;     askend
+;   echo <string>           defines a list of strings separated
+;                           with | that are displayed in the status
+;                           window; window clears before output; can have
+;                           up to 10 lines of 54 chars each; text is
+;                           centered
+;   copy <source> <dest>    source and dest must have all path info,
+;                           but no drive letter; folders in dest are
+;                           created; dest filename can differ from source;
+;                           don't begin dest with "\" if you use the
+;                           DESTSEL command to get a path!
+;   copyo <source> <dest>   same as copy, but overwrites without asking
+;   pause <seconds>         wait for a number of seconds
+;   more                    wait for keypress
+;   exit                    quit script
+;   flush                   flush copy buffer; call before quitting
+;                           or data in buffer is not written!
+;   gem <program> <params>  run GEM program; same as TOS, except mouse
+;                           is active and GEM screen is the default
+;   ifex <file>             execute commands only if file exists; filename
+;     <commands>            can contain wildcards
+;   ifend
+;   ifnex                   same as ifex, except commands only happen if
+;                           file does not exist
+;   setdest <drive>         set the copy destination drive; if drive does
+;                           not exist, the A drive is used
+;   swapsrc <drive> <new name> automatically asks for disk swap; a message
+;                           only appears if the drive is A: or B:
+;   swapdest <new name>     asks for different dest disk from now on;
+;                           automatically flushes before swapping
+;   mkdir <folder>          creates empty folders, as necessary. If,
+;                           for instance, you use "mkdir foo\bar", both
+;                           foo and bar folders will be created. This is
+;                           buffered like COPY.
+;   rm <file>               delete file from disk; must specify full path;
+;                           not checked for errors; no change in status
+;   rmdir <folder>          delete folder from disk; see rm
+;   bell                    ring system bell
+;   tos <program> <params>  run TOS program; automatically calls flush
+;                           first; system path is set to the program;
+;       Example: to run arc.ttp on the source disk:
+;         mkdir fonts
+;         tos %sdriveARC\ARC.TTP x %sdriveFONTS.ARC %ddriveFONTS\*.*
+;       Example: to run self-extracting ARC fonts.tos:
+;         copy fonts.tos fonts\fonts.tos
+;         tos %ddriveFONTS.TOS
+;         rm %ddriveFONTS.TOS
+;       Example: to run REGISTER.PRG on the same disk as INSTALL
+;         gem register.prg
+;   untilex <file> <diskname> keep asking for the source disk until file exists;
+;                           must specify full path and disk name; can have
+;                           wildcards
+;   open                    initialize a text file
+;   write <string>          write one line of a text file
+;   close <textfile>        close and save a text file; existing file is
+;                           renamed to name.OLD
+;   var <value>             set next variable (up to 5) to value (up to 120
+;                           chars); starts at %var1, then %var2...
+;
+; Strings that can be re-defined:
+;   o Some strings are alerts. These are just like GEM alert strings,
+;     but do not have the "[x][" chars at the beginning.
+;   o The maximum string lengths are in parentheses. Do not exceed them!
+;   o These strings do not need to be changed, since the default values
+;     are good enough for most cases. Most of what is given here matches
+;     the defaults.
+;
+; A real script file shouldn't have all of these comments, and does
+; not need to have all of the strings defined, since the defaults for
+; most strings are fine as-is.
+;
+;* Initial disk names (12)
+source  Source
+dest    Destination
+;* Displayed in top box of drives selection dialog (25)
+dtitle Foo 3.0 Installation
+;* Lines 1 and 2 of message in drives selection dialog (25)
+dinfo1  Choose the Drives to
+dinfo2  Use During Installation
+;* (25)
+dsource Source Drive:
+;* (25)
+ddest   Destination Drive:
+;* Buttons (10)
+dinstall Install
+dquit    Quit
+;* Strings in status at top (10)
+sread   Reading
+swrite  Writing
+sstatus Status:
+sdrive  Drive:
+sname   Name:
+sfolder Folder:
+sfile   File:
+;* The following strings are updated as files are copied. They should
+;* only be set for special circumstances
+;sstatmsg (10)
+;sdrivmsg (1)
+;sdisknam (10)
+;sfoldnam (12)
+;sfilenam (12)
+;* Quit button (10)
+squit   Quit
+;* Undo message at bottom of dialog (30)
+sundo   PRESS Undo OR ~5EC TO ABORT
+;*
+;* Alerts start here. All are 140 chars max. They are in GEM format,
+;* but without the first [x][. Lines should be no more than 54 chars.
+;* These all match the defaults.
+;*
+abortmsg Undo has been pressed. Abort the whole ^
+installation|or continue?][Abort|Continue]
+diskfull ||The destination disk is full!][Drats!]
+notfound This file was not found on the disk!|Try a different disk?][Retry|Cancel]
+exists   The destination file already exists.|Do what?][Skip|Overwrite|Cancel]
+readerr  An error was encountered when reading this file!][Retry|Cancel]
+writerr  An error was encountered when writing this file!][Retry|Cancel]
+baddata  An error has occurred.|Skip the file or abort installation?][Skip|Abort]
+folderr  Folder %folder does not exist and|it could not be created][Retry|Cancel]
+swapmsg  Please insert disk "%diskname" into drive %drive][Ok|Cancel]
+;* This only appears after the RUN command
+runmsg   Press any key to continue...
+;* This one has to be no more than 5 lines of 30 chars each
+quitask  Are you sure you want|to quit this program?][Quit|Stay]
+;*
+;* Maximum destination drive letter. Use this to prevent installation
+;* to a hard disk if using ASKDRIVE.
+;*
+maxdrive p
+;*
+;* Minimum destination drive letter. Use this to prevent installation
+;* to anything but a hard disk if using ASKDRIVE.
+;*
+mindrive a
+;*
+;* Here's where the fun begins:  start by putting up an intro
+;*
+ECHO Installation program test script|by Dan Wilga||^
+Press a key to continue...
+;* Test the more command
+more
+;* Get some input. First put up a message:
+echo Which command do you want to test?
+;* Ask for a selection
+ask Askdrive|Destsel
+  button1
+    askdrive
+  button2
+    destsel C:\*.* Destination Path:
+askend
+;* Now find out if the user wants to continue
+echo Do you want to test copying or quit?
+ask Test Copy
+  button1
+    ECHO Please insert a disk containing INSTALL.PRG|^
+and INSTALL.SCR into drive %sdrive.|^
+The destination is drive %ddrive.|||^
+Pausing...
+;   * Test the pause command
+    pause 3
+;   * Copy some files. The program will put up a swapmsg before this
+;   * because it is the first copy.
+    mkdir \test\empty
+    copy install.prg \test\install.prx
+    swapdest Swap Test
+    copy install.scr \test\install.scr
+;   * This is necessary so that all writes will be completed
+    flush
+    bell
+    echo All done!
+    pause 5
+askend
+;* Exit here is not really needed because there aren't more commands
+exit
+;* Th-th-that's all, folx

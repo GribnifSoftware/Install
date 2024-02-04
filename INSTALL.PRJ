@@ -1,0 +1,8 @@
+*                  ; name of executable program is topmost window
+=                  ; list of modules follows...
+pcSTART.O          ; startup code
+*                  ; compile topmost window
+installs.s
+pcSTDLIB.LIB       ; standard library
+pcTOSLIB.LIB       ; TOS library
+new_GEM.LIB       ; AES and VDI library
